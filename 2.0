@@ -1,0 +1,60 @@
+pragma solidity ^0.8.0;
+
+contract HedgingSmartContract {
+    // Struct to represent a hedging agreement
+    struct HedgingAgreement {
+        address buyer;          // Address of the hedging buyer
+        address seller;         // Address of the hedging seller
+        uint256 amount;         // Amount of the underlying asset being hedged
+        uint256 strikePrice;    // Strike price of the hedging agreement
+        uint256 expiration;     // Expiration timestamp of the agreement
+        bool executed;          // Flag indicating whether the agreement has been executed
+    }
+
+    // Mapping to store hedging agreements by agreement ID
+    mapping(uint256 => HedgingAgreement) public hedgingAgreements;
+    uint256 public agreementCounter;
+
+    // Event to log the execution of a hedging agreement
+    event AgreementExecuted(uint256 agreementId, address buyer, address seller, uint256 amount, uint256 strikePrice, uint256 expiration);
+
+    // Function to create a new hedging agreement
+    function createHedgingAgreement(address _buyer, uint256 _amount, uint256 _strikePrice, uint256 _expiration) external {
+        require(_buyer != address(0), "Invalid buyer address");
+        require(_amount > 0, "Invalid amount");
+        require(_strikePrice > 0, "Invalid strike price");
+        require(_expiration > block.timestamp, "Invalid expiration time");
+
+        HedgingAgreement memory newAgreement = HedgingAgreement({
+            buyer: _buyer,
+            seller: msg.sender,
+            amount: _amount,
+            strikePrice: _strikePrice,
+            expiration: _expiration,
+            executed: false
+        });
+
+        hedgingAgreements[agreementCounter] = newAgreement;
+        emit AgreementExecuted(agreementCounter, _buyer, msg.sender, _amount, _strikePrice, _expiration);
+        agreementCounter++;
+    }
+
+    // Function to execute a hedging agreement
+    function executeHedgingAgreement(uint256 _agreementId) external {
+        require(_agreementId < agreementCounter, "Invalid agreement ID");
+        require(!hedgingAgreements[_agreementId].executed, "Agreement already executed");
+        require(msg.sender == hedgingAgreements[_agreementId].buyer, "Only the buyer can execute the agreement");
+        require(block.timestamp < hedgingAgreements[_agreementId].expiration, "Agreement has expired");
+
+        // Execute the agreement by transferring the underlying asset to the buyer
+        // The buyer pays the strike price to the seller
+        // This is a simplified version and may require additional logic depending on the asset and platform
+        // (e.g., ERC20 tokens, Ether, etc.)
+        // For demonstration purposes, we assume the asset is transferred directly
+        // and the strike price is paid in Ether
+        payable(hedgingAgreements[_agreementId].seller).transfer(hedgingAgreements[_agreementId].strikePrice);
+        payable(hedgingAgreements[_agreementId].buyer).transfer(hedgingAgreements[_agreementId].amount);
+        
+        hedgingAgreements[_agreementId].executed = true;
+    }
+}
